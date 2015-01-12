@@ -6,10 +6,12 @@
 data <- read.csv("repdata_data_StormData.csv", stringsAsFactors = FALSE)
 
 # Get needed subset of the data - total of 5 variables
-data <- data[, c("PROPDMG", "CROPDMG", "EVTYPE", "INJURIES", "FATALITIES")]
+data <- data[, c("PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP", "EVTYPE", "INJURIES", "FATALITIES")]
 
 # Make EVTYPE to be factor variable
 data$EVTYPE <- as.factor(data$EVTYPE)
+
+######################### QUESTION 1 ############################################################
 
 # aggregate INJURIES by EVTYPE
 injuries <- data[, c("EVTYPE", "INJURIES")]
@@ -34,12 +36,16 @@ casualties <- casualties[1:5,]
 # Reorder the data inside the casualties data frame
 casualties <- transform(casualties, EVTYPE = reorder(EVTYPE, order(TOTAL, decreasing=TRUE)))
 
+# Showing final data set that will be plotted
+head(casualties, 5)
+
 # Graph casualties$EVTYPE vs casualties$TOTAL using ggplot2 nicely
 library(ggplot2)
 ggplot(casualties, aes(EVTYPE, TOTAL)) + geom_bar(stat="identity") + xlab("Event Type") +
        ylab("Number of casualties") + ggtitle("5 Harmful Types of Climate Events") +
        theme(axis.text.x=element_text(angle=90, vjust=0.5)) 
 
+######################### QUESTION 2 ############################################################
 
 
 
