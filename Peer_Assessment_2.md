@@ -2,7 +2,7 @@
 
 # Impacts of Severe Weather on Economy and Health
 
-#### by Aleksey Kramer, *Mon Jan 12 18:15:58 2015*
+#### by Aleksey Kramer, *Mon Jan 12 18:27:34 2015*
 
 ## Synopsis
 
