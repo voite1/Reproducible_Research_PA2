@@ -1,0 +1,215 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+# Impacts of Severe Weather on Economy and Health
+
+#### by Aleksey Kramer, *`r date()`*
+
+## Synopsis
+
+This report uses National Oceanic and Atmospheric Administration's database of severe weather events. The dataset available for analysis contains the data collected between years of 1950 and 2011. This report identifies the most harmful weather events with respect to economic impact and population health impact.  The findings of this report indicate that tornados and floods are the most harmful to human population and the most expensive respectfully.  This report also produces a graph of most impactful weather events in descending order for both, heath and economic impacts of the severe weather events.
+
+#### Data Seelectd for Analysis
+
+The data selected for analysis was downloaded from [Storm Data]( https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2).  The description of the dataset was downloaded from the [Storm Data Documentation]( https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf). The variables used in this report are: *PROPDMG*, *PROPDMGEXP*, *CROPDMG*, *CROPDMGEXP*, *EVTYPE*, *INJURIES*, *FATALITIES*.  It is assumed that PROPDMG and CROPDMG variables are sufficient indicators of the economic impact, while INJURIES and FATALITIES were sufficient indicator of population's health impact.
+
+## Data Processing
+
+Load libraries for data plotting
+
+```{r load_libraries}
+library(ggplot2)
+```
+
+Download data from the web if not already downloaded
+
+```{r download_data}
+if (file.exists("repdata_data_StormData.csv.bz2") & file.exists("repdata_peer2_doc_pd01016005curr.pdf")) {
+    print("Using already downloaded data")
+} else {
+    data_url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+    download.file(data_url, "repdata_data_StormData.csv.bz2", mode="wb")
+    
+    doc_url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf"
+    download.file(doc_url, "repdata_peer2_doc_pd01016005curr.pdf", mode="wb")
+}
+```
+
+Load the data into the data frame and selecting the subset of variables, namly *PROPDMG*, *PROPDMGEXP*, *CROPDMG*, *CROPDMGEXP*, *EVTYPE*, *INJURIES*, *FATALITIES* that is used for the analysis.
+
+```{r load_data}
+my_file <- bzfile("repdata_data_StormData.csv.bz2", "r")
+data <- read.csv(my_file, stringsAsFactors = FALSE)
+close(my_file)
+
+# Subset the data needed for analysis
+data <- data[, c("PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP", "EVTYPE", "INJURIES", "FATALITIES")]
+
+# Make EVTYPE to be factor variable
+data$EVTYPE <- as.factor(data$EVTYPE)
+```
+
+### Across the United States, which types of events (as indicated in the *EVTYPE* variable) are most harmful with respect to population health?
+
+To determine the most harmful sever weather events with respect for human population, the variables *INJURIES*, *FATALITIES*, and *EVTYPE* are used. It is assumed that these variable provide sufficient indicator on which severe weather events are most harmful. We start with aggregating  combining *INJURIES* and *FATALITIES* by *EVTYPE* to be used in analysis.
+
+```{r}
+# INJURIES
+injuries <- data[, c("EVTYPE", "INJURIES")]
+injuries <- aggregate(injuries$INJURIES, by=list(injuries$EVTYPE), FUN=sum, rm.na=TRUE)
+colnames(injuries) <- c("EVTYPE", "INJURIES")
+
+# FATALITIES
+fatalities <- data[, c("EVTYPE", "FATALITIES")]
+fatalities <- aggregate(fatalities$FATALITIES, by=list(fatalities$EVTYPE), FUN=sum, rm.na=TRUE)
+colnames(fatalities) <- c("EVTYPE", "FATALITIES")
+```
+
+Create the data frame called *himpact* by merging *injuries* and *fatalities* data frame by *EVTYPE*. Store the sum of *FATALITIES* and *INJURIES* variables into single variable called *TOTAL*.  
+
+```{r}
+himpact <- merge(injuries,fatalities,by="EVTYPE")
+himpact$TOTAL <- himpact$INJURIES + himpact$FATALITIES
+```
+
+Sort the data frame in descending order and reduce the number of rows to be displayed.
+
+```{r}
+himpact <- himpact[with(himpact, order(-TOTAL)),]
+
+# Selecting only largest 5 rows to plot
+himpact <- himpact[1:10,]
+```
+
+Assure the data is sorted for plotting in descending order by *TOTAL*
+
+```{r}
+himpact <- transform(himpact, EVTYPE = reorder(EVTYPE, order(TOTAL, decreasing=TRUE)))
+```
+
+Display the data fram to be plotted
+```{r}
+# Showing final data set that will be plotted
+head(himpact, 10)
+```
+
+Create a plot of *himpact@TOTAL* by *ehmpact@EVTYPE*. The plot denotes occurances of injures of death due to severe weather events. The rest of the dataset is not plotted due other severe weather events causing significantly diminishing effect on population health.
+
+```{r}
+# Graph himpact$EVTYPE vs himpact$TOTAL using ggplot2 nicely
+ggplot(himpact, aes(EVTYPE, TOTAL)) + geom_bar(stat="identity") + xlab("Event Type") +
+    ylab("Number of Health-Related Incidents") + 
+    ggtitle("Affect of Severe Weather Events on Population Health") +
+    theme(axis.text.x=element_text(angle=90, vjust=0.5)) 
+```
+
+### Across the United States, which types of events have the greatest economic consequences?
+
+Prepare two data frames to hold the values of property damange *(PROPDMG)* and crop damaage *(CROPDMG)*. At the same time, remove incomplete records.
+
+```{r create_economic_variables}
+propdmg <- data[, c("EVTYPE", "PROPDMG", "PROPDMGEXP")]
+propdmg <- na.omit(propdmg)
+cropdmg <- data[, c("EVTYPE", "CROPDMG", "CROPDMGEXP")]
+cropdmg <- na.omit(cropdmg)
+```
+
+Change all the exponent indicators to upper case to make sure all the exponents are accounted for later when processing exponents.
+
+```{r toupper_exponents}
+propdmg[, "PROPDMGEXP"] <- toupper(propdmg[, "PROPDMGEXP"])
+cropdmg[, "CROPDMGEXP"] <- toupper(cropdmg[, "CROPDMGEXP"])
+```
+
+Create a function that translates character value of the *PROPDMGEXP* and *CROPDMGEXP* into numeric exponents.
+
+```{r exponent_function}
+transf_exp <- function(exp) {
+    if (exp %in% c("H"))
+        return(2)
+    else if (exp %in% c("K"))
+        return(3)
+    else if (exp %in% c("M"))
+        return(6)
+    else if (exp %in% c("B"))
+        return(9)
+    else if (suppressWarnings(!is.na(as.numeric(exp))))
+        return(suppressWarnings(as.numeric(exp)))
+    else {
+        return(0)
+    }
+}
+```
+
+Use *transf_exp()* function written above, update the *PROPDMG* and *CROPDMG* variables to show real numbers (normalize data).
+
+```{r update_by_exponent}
+# propdmg
+exponent <- sapply(propdmg$PROPDMGEXP, FUN=transf_exp)
+propdmg$PROPDMG <- propdmg$PROPDMG * (10 ** exponent)
+propdmg$EVTYPE <- as.factor(propdmg$EVTYPE)
+propdmg <- aggregate(propdmg$PROPDMG, by=list(propdmg$EVTYPE), FUN=sum, rm.na=TRUE)
+colnames(propdmg) <- c("EVTYPE", "PROPDMG")
+
+# cropdmg
+exponent <- sapply(cropdmg$CROPDMGEXP, FUN=transf_exp)
+cropdmg$CROPDMG <- cropdmg$CROPDMG * (10 ** exponent)
+cropdmg$EVTYPE <- as.factor(cropdmg$EVTYPE)
+cropdmg <- aggregate(cropdmg$CROPDMG, by=list(cropdmg$EVTYPE), FUN=sum, rm.na=TRUE)
+colnames(cropdmg) <- c("EVTYPE", "CROPDMG")
+```
+
+Create economic impact data frame called *eimpact* and buil variable *TOTAL* to hold the sum of two ammounts: property damage and crop damage.
+
+```{r create_eimpact_variable}
+eimpact <- merge(propdmg,cropdmg,by="EVTYPE")
+eimpact$TOTAL <- eimpact$PROPDMG + eimpact$CROPDMG
+```
+
+Sort the data frame in descending order and reduce the number of rows to be displayed.
+
+```{r sort_economic_data}
+eimpact <- eimpact[with(eimpact, order(-TOTAL)),]
+
+# Selecting only largest 5 rows to plot
+eimpact <- eimpact[1:15,]
+
+# Divide total by 1 billion to better rerpesent on the plot
+eimpact$TOTAL <- eimpact$TOTAL / 1000000000
+```
+
+Prepare *eimpact* data frame for plotting by assuring that the data frame is sorted in descending order by variablle *TOTAL*. Only first fifteen records are selected due to significant diminishing of hte impact and the ease of presentation.
+
+```{r display_economic_dataset}
+eimpact <- transform(eimpact, EVTYPE = reorder(EVTYPE, order(TOTAL, decreasing=TRUE)))
+
+# Showi final data set that will be plotted
+head(eimpact, 15)
+```
+
+Create a plot of *eimpact@TOTAL* by *eimpact@EVTYPE*. The plot denotes monetary impact in *BILLIONS* of severe weather events on economy. The rest of the dataset is not plotted due other severe weather events causing significantly diminishing monetary impact on the economy.
+
+```{r graph_economic_impact}
+ggplot(eimpact, aes(EVTYPE, TOTAL)) + geom_bar(stat="identity") + xlab("Event Type") +
+    ylab("Economic Damage (in Billions)") + ggtitle("Economic Datamage by Severe Weather Event") +
+    theme(axis.text.x=element_text(angle=90, vjust=0.5)) 
+```
+
+## Results
+
+According to the analysis, top 5 most harmful sever weather events with respect to economy are:
+
+1. Flood
+2. Hurricane/Typhoon
+3. Torndado
+4. Storm Surge
+5. Hail
+
+Analysis also indicates that top 5 most harmful severe weather events wit respect to population health are:
+
+1. Tornado
+2. Excessive Heat
+3. MSTM Wind
+4. Flood
+5. Lightning
