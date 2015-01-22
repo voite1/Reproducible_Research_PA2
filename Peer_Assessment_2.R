@@ -128,7 +128,3 @@ head(eimpact, 15)
 ggplot(eimpact, aes(EVTYPE, TOTAL)) + geom_bar(stat="identity") + xlab("Event Type") +
     ylab("Health Impact (Billions)") + ggtitle("15 Most Harmful Events Affecting Health") +
     theme(axis.text.x=element_text(angle=90, vjust=0.5)) 
-
-
-
-

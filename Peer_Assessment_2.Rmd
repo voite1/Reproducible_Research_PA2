@@ -1,16 +1,12 @@
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache=TRUE)
-```
+# Impacts of Severe Weather on Economy and Health 
 
-# Impacts of Severe Weather on Economy and Health
+#### by Aleksey Kramer, *`r date()`* 
 
-#### by Aleksey Kramer, *`r date()`*
-
-## Synopsis
+## Synopsis 
 
 This report uses National Oceanic and Atmospheric Administration's database of severe weather events. The dataset available for analysis contains the data collected between years of 1950 and 2011. This report identifies the most harmful weather events with respect to economic impact and population health impact.  The findings of this report indicate that tornados and floods are the most harmful to human population and the most expensive respectfully.  This report also produces a graph of most impactful weather events in descending order for both, heath and economic impacts of the severe weather events.
 
-#### Data Seelectd for Analysis
+#### Data Seelectd for Analysis 
 
 The data selected for analysis was downloaded from [Storm Data]( https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2).  The description of the dataset was downloaded from the [Storm Data Documentation]( https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf). The variables used in this report are: *PROPDMG*, *PROPDMGEXP*, *CROPDMG*, *CROPDMGEXP*, *EVTYPE*, *INJURIES*, *FATALITIES*.  It is assumed that PROPDMG and CROPDMG variables are sufficient indicators of the economic impact, while INJURIES and FATALITIES were sufficient indicator of population's health impact.
 
